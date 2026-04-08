@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عجلة رحلة الاكتشاف والمرح</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: linear-gradient(135deg, #e8f4fd 0%, #d1ecf9 50%, #e8f4fd 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  /* Floating clouds background */
+  body::before {
+    content: '☁️ ☁️ ☁️';
+    position: fixed;
+    top: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 2rem;
+    opacity: 0.3;
+    pointer-events: none;
+    letter-spacing: 60px;
+  }
+
+  .container {
+    background: white;
+    border-radius: 30px;
+    padding: 30px 25px;
+    box-shadow: 0 20px 60px rgba(0,100,200,0.15);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+  }
+
+  .title {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #1a6fc4;
+    margin-bottom: 5px;
+    letter-spacing: 1px;
+  }
+  .title span { color: #0099cc; }
+
+  .subtitle {
+    font-size: 0.95rem;
+    color: #0099cc;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  /* Wheel wrapper */
+  .wheel-wrapper {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    margin: 0 auto 20px;
+  }
+
+  /* Pointer arrow at top */
+  .pointer {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 30px solid #1a6fc4;
+    z-index: 10;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+
+  canvas {
+    border-radius: 50%;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2), inset 0 0 0 4px rgba(255,255,255,0.3);
+  }
+
+  /* Center circle on canvas is drawn via JS */
+
+  .spin-btn {
+    background: linear-gradient(135deg, #1a6fc4, #0099cc);
+    color: white;
+    border: none;
+    padding: 14px 50px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-family: 'Tajawal', sans-serif;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 6px 20px rgba(26,111,196,0.4);
+    letter-spacing: 1px;
+  }
+  .spin-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(26,111,196,0.5);
+  }
+  .spin-btn:active:not(:disabled) { transform: scale(0.97); }
+  .spin-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* Result popup */
+  .result-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+  }
+  .result-overlay.show { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .result-card {
+    background: white;
+    border-radius: 24px;
+    padding: 35px 40px;
+    text-align: center;
+    max-width: 320px;
+    width: 90%;
+    animation: popUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  @keyframes popUp {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  .result-emoji { font-size: 3.5rem; margin-bottom: 10px; }
+  .result-label {
+    font-size: 1.4rem;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .result-desc {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 20px;
+  }
+
+  .close-btn {
+    background: linear-gradient(135deg, #1a6fc4, #0099cc);
+    color: white;
+    border: none;
+    padding: 10px 35px;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Tajawal', sans-serif;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .close-btn:hover { transform: scale(1.05); }
+
+  .footer-text {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-top: 15px;
+  }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+    pointer-events: none;
+    z-index: 200;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="title">✈️ عجلة رحلة <span>الاكتشاف والمرح</span> ✈️</div>
+  <div class="subtitle">مع الكابتن الأخصائية النفسية خولة العامري</div>
+
+  <div class="wheel-wrapper">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="320" height="320"></canvas>
+  </div>
+
+  <button class="spin-btn" id="spinBtn" onclick="spin()">🔄 دوّري العجلة</button>
+  <div class="footer-text">☁️ رحلة الاكتشاف والمرح – المرحلة المتوسطة</div>
+</div>
+
+<!-- Result popup -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card" id="resultCard">
+    <div class="result-emoji" id="resEmoji"></div>
+    <div class="result-label" id="resLabel"></div>
+    <div class="result-desc" id="resDesc"></div>
+    <button class="close-btn" onclick="closeResult()">✈️ رحلة جديدة!</button>
+  </div>
+</div>
+
+<script>
+const segments = [
+  { label: "هبة مفاجئة",   emoji: "🎁", color: "#FF6B35", desc: "حظاً موفقاً، هديّة مفاجئة تنتظرك!" },
+  { label: "وردة لكِ",      emoji: "🌸", color: "#E91E8C", desc: "شيء جميل يُزهر في طريقك اليوم 🌸" },
+  { label: "جائزة الرحل",  emoji: "🎀", color: "#4CAF50", desc: "أنتِ الفائزة بجائزة الرحلة! 🎉" },
+  { label: "مطيري عالمي",  emoji: "✈️", color: "#03A9F4", desc: "أنتِ ملكة السماء والرحلات! ✈️" },
+  { label: "أبطال الجو",   emoji: "🦸", color: "#7B1FA2", desc: "قوّة خارقة تسكن بداخلكِ! 💪" },
+  { label: "نجمة رحلتنا",  emoji: "⭐", color: "#FF9800", desc: "أنتِ نجمة رحلتنا المميّزة! ⭐" },
+  { label: "حظ موفق",      emoji: "🍀", color: "#2196F3", desc: "الحظ السعيد رفيقكِ اليوم! 🍀" },
+  { label: "موسيقى الجو",  emoji: "🎵", color: "#F44336", desc: "روحكِ تغنّي وتحلّق عالياً! 🎶" },
+  { label: "حلوى السحاب",  emoji: "🍩", color: "#9C27B0", desc: "حلاوة كحلاوة غيوم السماء! 🌤" },
+  { label: "صديقة القمر",  emoji: "🌙", color: "#009688", desc: "نورك يضيء كنور القمر في الليل! 🌙" },
+];
+
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const n = segments.length;
+const arc = (2 * Math.PI) / n;
+let currentAngle = 0;
+let spinning = false;
+
+function drawWheel(rotation) {
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const r = cx - 4;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Outer ring shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.2)';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.restore();
+
+  for (let i = 0; i < n; i++) {
+    const startAngle = rotation + i * arc;
+    const endAngle   = startAngle + arc;
+    const seg = segments[i];
+
+    // Slice
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // Emoji
+    const midAngle = startAngle + arc / 2;
+    const emojiR   = r * 0.72;
+    const ex = cx + Math.cos(midAngle) * emojiR;
+    const ey = cy + Math.sin(midAngle) * emojiR;
+    ctx.save();
+    ctx.font = '20px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(seg.emoji, ex, ey);
+    ctx.restore();
+
+    // Label text
+    const textR = r * 0.45;
+    const tx = cx + Math.cos(midAngle) * textR;
+    const ty = cy + Math.sin(midAngle) * textR;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(midAngle + Math.PI / 2);
+    ctx.font = 'bold 11px Tajawal, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(seg.label, 0, 0);
+    ctx.restore();
+  }
+
+  // Center circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 36, 0, 2 * Math.PI);
+  ctx.fillStyle = '#1a6fc4';
+  ctx.fill();
+  ctx.strokeStyle = 'white';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+
+  // Plane emoji center
+  ctx.save();
+  ctx.font = '22px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✈️', cx, cy);
+  ctx.restore();
+
+  // Outer border
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#1a6fc4';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.restore();
+}
+
+drawWheel(currentAngle);
+
+function spin() {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+
+  const extraSpins = (5 + Math.random() * 5) * 2 * Math.PI;
+  const randomStop = Math.random() * 2 * Math.PI;
+  const totalRotation = extraSpins + randomStop;
+  const duration = 3500 + Math.random() * 1500;
+  const startTime = performance.now();
+  const startAngle = currentAngle;
+
+  function easeOut(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    const easedT = easeOut(t);
+    currentAngle = startAngle + totalRotation * easedT;
+    drawWheel(currentAngle);
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      spinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      showResult();
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function showResult() {
+  // Which segment is at the top pointer (top = -π/2)
+  const normalized = (((-currentAngle - Math.PI / 2) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const idx = Math.floor(normalized / arc) % n;
+  const seg = segments[idx];
+
+  document.getElementById('resEmoji').textContent = seg.emoji;
+  document.getElementById('resLabel').textContent = seg.label;
+  document.getElementById('resDesc').textContent  = seg.desc;
+  document.getElementById('resultCard').style.borderTop = `8px solid ${seg.color}`;
+
+  document.getElementById('resultOverlay').classList.add('show');
+  launchConfetti(seg.color);
+}
+
+function closeResult() {
+  document.getElementById('resultOverlay').classList.remove('show');
+}
+
+function launchConfetti(accentColor) {
+  const colors = [accentColor, '#FF6B35', '#E91E8C', '#4CAF50', '#03A9F4', '#FF9800', '#9C27B0'];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.top  = '-20px';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+    piece.style.animationDelay    = Math.random() * 0.8 + 's';
+    piece.style.width  = (8 + Math.random() * 8) + 'px';
+    piece.style.height = (8 + Math.random() * 8) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    document.body.appendChild(piece);
+    piece.addEventListener('animationend', () => piece.remove());
+  }
+}
+</script>
+</body>
+</html>
